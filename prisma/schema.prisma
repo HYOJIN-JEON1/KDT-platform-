@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  name              String?
+  email             String             @unique
+  password          String
+  role              String             @default("TALENT")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  profile           Profile?
+  sentProposals     MeetingProposal[]  @relation("ProposerUser")
+  receivedProposals MeetingProposal[]  @relation("ReceiverUser")
+  posts             Post[]             @relation("PostAuthor")
+  comments          Comment[]          @relation("CommentAuthor")
+  jobs              Job[]              @relation("JobAuthor")
+  capstonProjects   CapstonProject[]   @relation("ProjectAuthor")
+  projectComments   ProjectComment[]   @relation("ProjectCommentAuthor")
+  projectLikes      ProjectLike[]      @relation("ProjectLikeUser")
+}
+
+model Profile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  introduction String?
+  skills       String?
+  experiences  String?  // JSON string으로 저장
+  educations   String?  // JSON string으로 저장
+  portfolios   String?  // JSON string으로 저장
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AllowedUser {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  role         String   @default("TALENT")
+  isRegistered Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model MeetingProposal {
+  id                String        @id @default(uuid())
+  proposerId        String
+  receiverId        String
+  title             String
+  message           String
+  status            String        @default("PENDING")
+  proposedDateTime  DateTime?
+  location          String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  proposer          User          @relation("ProposerUser", fields: [proposerId], references: [id], onDelete: Cascade)
+  receiver          User          @relation("ReceiverUser", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+model Post {
+  id        String    @id @default(uuid())
+  title     String
+  content   String
+  authorId  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  author    User      @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  authorId  String
+  postId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  author    User     @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Job {
+  id            String   @id @default(uuid())
+  title         String
+  company       String
+  location      String?
+  description   String
+  requirements  String?
+  salary        String?
+  jobType       String   @default("FULL_TIME") // FULL_TIME, PART_TIME, CONTRACT, INTERNSHIP
+  experience    String?  // ENTRY, JUNIOR, SENIOR, LEAD
+  skills        String?  // JSON string
+  benefits      String?
+  contactEmail  String?
+  authorId      String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  author        User     @relation("JobAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model CapstonProject {
+  id            String   @id @default(uuid())
+  title         String
+  description   String
+  techStack     String?  // JSON string - 사용 기술
+  githubUrl     String?
+  demoUrl       String?
+  imageUrl      String?
+  category      String   @default("WEB") // WEB, MOBILE, AI, BLOCKCHAIN, etc.
+  status        String   @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, PAUSED
+  teamSize      Int      @default(1)
+  duration      String?  // "3개월", "6개월" 등
+  startDate     DateTime?
+  endDate       DateTime?
+  authorId      String
+  likes         Int      @default(0)
+  views         Int      @default(0)
+  featured      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  author        User     @relation("ProjectAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  comments      ProjectComment[]
+  likes_users   ProjectLike[]
+}
+
+model ProjectComment {
+  id        String          @id @default(uuid())
+  content   String
+  authorId  String
+  projectId String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  
+  author    User            @relation("ProjectCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  project   CapstonProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ProjectLike {
+  id        String          @id @default(uuid())
+  userId    String
+  projectId String
+  createdAt DateTime        @default(now())
+  
+  user      User            @relation("ProjectLikeUser", fields: [userId], references: [id], onDelete: Cascade)
+  project   CapstonProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, projectId])
+}
